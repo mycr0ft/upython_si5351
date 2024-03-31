@@ -105,18 +105,14 @@ class SI5351:
         return
 
     def write8( self, register, value):
-        self.i2c.start()
         buffera = bytearray(1)
         buffera[0] = value & 0xff
         self.i2c.writeto_mem(  self.address, register, buffera)
-        self.i2c.stop()
         return
 
     def read8( self, register, value):
-        self.i2c.start()
         buffera = bytearray(1)
         self.i2c.readfrom_mem_into(  self.address, register, buffera)
-        self.i2c.stop()
         return
 
 
@@ -239,7 +235,7 @@ class SI5351:
 
         return None
 
-    def setupMultisynth( self, output, div, num, denom, pllsource):
+    def setupMultisynth( self, output, div, num, denom, pllsource, phase_delay):
         assert self.initialized  == True, "device not initialized"
         assert output in [0,1,2], "output out of range"
         assert div > 3, "div out of range"
@@ -266,7 +262,7 @@ class SI5351:
          #
          # P3[19:0] = c
 
-        if num==0:
+        if num==0 and phase_delay == 0.0:
             # integer mode
             P1 = 128 *div -512
             P2 = num
@@ -289,6 +285,15 @@ class SI5351:
         self.write8( baseaddr+5, ((P3 & 0x000F0000) >> 12) | ((P2 & 0x000F0000) >> 16) )
         self.write8( baseaddr+6, (P2 & 0x0000FF00) >> 8)
         self.write8( baseaddr+7, (P2 & 0x000000FF))
+        
+        if phase_delay != 0.0:
+            assert phase_delay > 0 and phase_delay <= 1.0, "Invalid phase delay, must be in [0,1]"
+            ph_delay_reg = SI5351_REGISTER_165_CLK0_INITIAL_PHASE_OFFSET + output
+            delay = int(phase_delay * (div + num/denom))
+            assert delay < 128, "Phase delay too large for selected PLL divisor"
+            self.write8(ph_delay_reg, delay)
+            self.write8(SI5351_REGISTER_177_PLL_RESET, (1 << 7) | (1 << 5))
+            
 
          # Configure the clk control and enable the output 
         clkControlReg = 0x0F                             # 8mA drive strength, MS0 as CLK0 source, Clock not inverted, powered up 
