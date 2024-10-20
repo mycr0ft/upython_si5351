@@ -235,7 +235,7 @@ class SI5351:
 
         return None
 
-    def setupMultisynth( self, output, div, num, denom, pllsource, phase_delay):
+    def setupMultisynth( self, output, div, num, denom, pllsource="A", phase_delay=0, inverted=0, powerdown=0):
         assert self.initialized  == True, "device not initialized"
         assert output in [0,1,2], "output out of range"
         assert div > 3, "div out of range"
@@ -300,7 +300,11 @@ class SI5351:
             clkControlReg |= (1 << 5) # /* Uses PLLB */
         if num == 0:
             clkControlReg |= (1 << 6) #  Integer mode */
-
+        if inverted == 1:
+            clkControlReg |= (1 << 4) #  Inverted clock */
+        if powerdown == 1:
+            clkControlReg |= (1 << 7) #  Powerdown driver */
+            
         if output == 0: 
             self.write8(SI5351_REGISTER_16_CLK0_CONTROL, clkControlReg)
         if output == 1:
