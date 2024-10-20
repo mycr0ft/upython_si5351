@@ -292,7 +292,6 @@ class SI5351:
             delay = int(phase_delay * (div + num/denom))
             assert delay < 128, "Phase delay too large for selected PLL divisor"
             self.write8(ph_delay_reg, delay)
-            self.write8(SI5351_REGISTER_177_PLL_RESET, (1 << 7) | (1 << 5))
             
 
          # Configure the clk control and enable the output 
@@ -319,3 +318,14 @@ class SI5351:
 
         return 
 
+    
+    def PLLsoftreset(self):
+        # soft-reset the PLLs (must be done after all configuration of clocks is complete
+        self.write8(SI5351_REGISTER_177_PLL_RESET, (1 << 7) | (1 << 5))
+
+    
+    def configureOutputs( self, mask=0x00):
+        assert self.initialized == True, "Error Device not initialized"
+        self.write8( SI5351_REGISTER_3_OUTPUT_ENABLE_CONTROL, mask ^ 0xFF)
+        
+        return 
