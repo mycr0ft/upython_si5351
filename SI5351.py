@@ -262,7 +262,7 @@ class SI5351:
          #
          # P3[19:0] = c
 
-        if num==0 and phase_delay == 0.0:
+        if num==0:
             # integer mode
             P1 = 128 *div -512
             P2 = num
@@ -286,12 +286,21 @@ class SI5351:
         self.write8( baseaddr+6, (P2 & 0x0000FF00) >> 8)
         self.write8( baseaddr+7, (P2 & 0x000000FF))
         
-        if phase_delay != 0.0:
-            assert phase_delay > 0 and phase_delay <= 1.0, "Invalid phase delay, must be in [0,1]"
-            ph_delay_reg = SI5351_REGISTER_165_CLK0_INITIAL_PHASE_OFFSET + output
-            delay = int(phase_delay * (div + num/denom))
-            assert delay < 128, "Phase delay too large for selected PLL divisor"
-            self.write8(ph_delay_reg, delay)
+        # Initial phase offset (registers 165..170, CLKx_PHOFF[6:0] in bits 6:0, bit 7
+        # reserved).  phase_delay is a fraction of the OUTPUT period
+        # Tout = Tvco * (div + num/denom), and one register step is a quarter of the VCO
+        # period (datasheet rev 0.95, register 165: "one LSB equivalent to a time delay of
+        # Tvco/4"), so the step count is phase_delay * 4 * (div + num/denom).  The offset is
+        # relative to the other outputs on the same PLL and is latched when the output is
+        # enabled, which is why it is written here rather than in enableOutputs().
+        # Zero is written explicitly when no delay is asked for, so re-configuring an
+        # output does not inherit the offset from an earlier call.
+        assert phase_delay >= 0, "Invalid phase delay, must not be negative"
+        assert phase_delay <= 1.0, "Invalid phase delay, must be in [0,1]"
+        delay = int( phase_delay * 4 * (div + num/denom))
+        assert delay < 128, "Phase delay too large for selected PLL divisor"
+        self.write8( SI5351_REGISTER_165_CLK0_INITIAL_PHASE_OFFSET + output,
+                     delay & 0x7F)
             
 
          # Configure the clk control and enable the output 

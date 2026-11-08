@@ -38,7 +38,13 @@ num2 = 2
 denom2 =10
 m2 = pllb/(divider+num2/denom2)
 print( "Set Output #1 to {:5.4E} Hz".format(m2) )
-clockgen.setupMultisynth( 1, divider, num2, denom2, pllsource="B")
+# Optional phase_delay, as a fraction of this output's period: 0.25 is a quarter
+# period late relative to the other outputs on PLLB, which is the offset you want
+# when driving a balanced mixer. It is quantised to a quarter of the VCO period
+# (333ps per step at 750MHz), and the 7-bit field limits it to 127 steps, so this
+# one is 0.25 * 4 * 32.2 = 32 steps out of a possible 127.
+print("Delay output #1 by a quarter period")
+clockgen.setupMultisynth( 1, divider, num2, denom2, pllsource="B", phase_delay=0.25)
 
 
 # Multisynth 2 is not yet used and won't be enabled, but can be */
